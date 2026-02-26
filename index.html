@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+
+  <link rel="stylesheet" href="./resources/mapoverlay.css">
+
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.2/css/fontawesome.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.2/css/solid.css">
+  <style>
+    .btn {
+      background-color: #ffffff;
+    }
+
+    .ol-geocoder.gcd-gl-container {
+      top: 65px !important;
+      left: .5em !important;
+      width: 2.1em !important;
+      height: 2.1em !important;
+    }
+
+    .ol-geocoder .gcd-gl-container {
+      width: 2.1em !important;
+      height: 2.1em !important;
+    }
+
+    .ol-geocoder .gcd-gl-control {
+      width: 2.1em !important;
+    }
+
+    .ol-geocoder .gcd-gl-expanded {
+      width: 15.625em !important;
+      height: 2.1875em;
+    }
+
+    .ol-touch .ol-geocoder.gcd-gl-container {
+      top: 80px !important;
+    }
+
+    .ol-geocoder .gcd-gl-btn {
+      width: 1.375em !important;
+      height: 1.375em !important;
+      top: .225em !important;
+      background-image: none !important;
+    }
+
+    .search-layer {
+      top: 10px;
+      left: 50px;
+      position: absolute;
+      z-index: 1;
+    }
+
+    .ol-touch .search-layer {
+      top: 130px;
+    }
+
+    html,
+    body {
+      background-color: #ffffff;
+    }
+
+    .ol-control button {
+      background-color: #f8f8f8 !important;
+      color: #000000 !important;
+      border-radius: 0px !important;
+    }
+
+    .ol-zoom,
+    .geolocate,
+    .gcd-gl-control .ol-control {
+      background-color: rgba(255, 255, 255, .4) !important;
+      padding: 3px !important;
+    }
+
+    .ol-scale-line {
+      background: none !important;
+    }
+
+    .ol-scale-line-inner {
+      border: 2px solid #f8f8f8 !important;
+      border-top: none !important;
+      background: rgba(255, 255, 255, 0.5) !important;
+      color: black !important;
+    }
+
+    /* The Modal (background) */
+    .modal {
+      display: none;
+      /* Hidden by default */
+      position: fixed;
+      /* Stay in place */
+      z-index: 1;
+      /* Sit on top */
+      left: 0;
+      top: 0;
+      width: 100%;
+      /* Full width */
+      height: 100%;
+      /* Full height */
+      overflow: auto;
+      /* Enable scroll if needed */
+      background-color: rgb(0, 0, 0);
+      /* Fallback color */
+      background-color: rgba(0, 0, 0, 0.4);
+      /* Black w/ opacity */
+    }
+
+    /* Modal Content/Box */
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      /* 15% from the top and centered */
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      /* Could be more or less, depending on screen size */
+    }
+
+    /* The Close Button */
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      border: 0;
+    }
+
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    .searchbar {
+      padding: 10px
+    }
+  </style>
+
+  <title>Image Export</title>
+</head>
+
+<body>
+  <div id="map">
+    <div id="popup" class="ol-popup">
+      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      <div id="popup-content"></div>
+    </div>
+    <div class="search-layer">
+      <input id="searchInput" placeholder="Lat,Lng" class="input">
+      <a id="myBtn" class="btn btn-outline-dark">Go</a>
+
+
+      <a id="export-jpg" class="btn btn-outline-dark"><i class="fa fa-download"></i> Download JPG</a>
+      <a id="image-download" download="map.jpg"></a>
+
+      <a id="export-kml" class="btn btn-outline-dark"><i class="fa fa-download"></i> Download KML</a>
+
+      <a id="config-apple-btn" class="btn btn-outline-dark"><i class="fa fa-cog"></i> Apple Maps Token</a>
+
+      <div class="modal" id="myModal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title" id="exampleModalLabel">Corner Coordinates</h2>
+              <button class="btn close" id="closeModalBtn">
+                <span>&times;</span>
+              </button>
+            </div>
+            <div id="coordinates">
+              ...
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal" id="appleModal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 class="modal-title">Apple Maps Token Config</h2>
+              <button class="btn close" id="closeAppleModalBtn">
+                <span>&times;</span>
+              </button>
+            </div>
+            <div style="padding-top: 15px;">
+              <p>Optionally manually set your Apple Maps JWT Token. Get one by opening the Dev Console on
+                <code>maps.apple.com</code> and pasting:
+              </p>
+              <div style="position: relative; margin-bottom: 15px;">
+                <pre
+                  style="background:#eee; padding:5px 40px 5px 5px; margin: 0; border-radius: 4px; overflow: hidden; font-family: monospace; white-space: pre-wrap; word-break: break-all;"
+                  id="appleTokenSnippet">new URL(performance.getEntriesByType("resource").find(e=>e.name.includes("apple-mapkit.com/tile")).name).searchParams.get("accessKey")</pre>
+                <button id="copySnippetBtn"
+                  style="position: absolute; top: 5px; right: 5px; background: transparent; border: none; cursor: pointer;"
+                  title="Copy to clipboard">
+                  <i class="fa fa-copy"></i>
+                </button>
+              </div>
+              <input id="appleTokenInput" placeholder="eyJhbG..." class="input"
+                style="width: 100%; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 15px; padding: 5px;">
+              <button id="saveAppleTokenBtn" class="btn btn-outline-dark">Save Reload</button>
+              <button id="clearAppleTokenBtn" class="btn btn-outline-danger">Clear Token</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  </div>
+  </div>
+
+
+
+  </div>
+
+  <!-- Pointer events polyfill for old browsers, see https://caniuse.com/#feat=pointer -->
+  <script src="https://cdn.jsdelivr.net/npm/elm-pep@1.0.6/dist/elm-pep.js"></script>
+  <script>
+
+    const input = document.getElementById("searchInput");
+    const myBtn = document.getElementById("myBtn");
+    const myModal = document.getElementById("myModal");
+    const closeModalBtn = document.getElementById("closeModalBtn");
+
+    function go() {
+      const newcoordinates = input.value.split(",");
+      if (newcoordinates.length >= 2) {
+        const lat = parseFloat(newcoordinates[0]);
+        const long = parseFloat(newcoordinates[1]);
+        if (!isNaN(lat) && !isNaN(long)) {
+          map.setView(new ol.View({
+            center: ol.proj.transform([long, lat], 'EPSG:4326', 'EPSG:3857'),
+            zoom: 18
+          }));
+        }
+      }
+    }
+
+    myBtn.addEventListener("click", go);
+
+    input.addEventListener("keypress", function (event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        myBtn.click();
+      }
+    });
+
+    function getFilenameRoot(north, east, south, west) {
+      return `Map ${Math.round(north * 100) / 100} ${Math.round(east * 100) / 100} ${Math.round(south * 100) / 100} ${Math.round(west * 100) / 100}`.replace(/\./g, '-');
+    }
+
+    function getExtentKeywords() {
+      const extent = map.getView().calculateExtent();
+      const extent_deg_NE = ol.proj.toLonLat([extent[2], extent[3]]);
+      const extent_deg_SW = ol.proj.toLonLat([extent[0], extent[1]]);
+      return {
+        north: extent_deg_NE[1],
+        east: extent_deg_NE[0],
+        south: extent_deg_SW[1],
+        west: extent_deg_SW[0]
+      };
+    }
+
+    document.getElementById('export-jpg').addEventListener('click', function () {
+      myModal.style.display = "block";
+      map.once('rendercomplete', function () {
+        const { north, east, south, west } = getExtentKeywords();
+
+        document.getElementById("coordinates").innerHTML = `<br><b>NE:</b><br><br>${north},${east}<br><br><b>SW:</b><br><br>${south},${west}`;
+
+        const mapCanvas = document.createElement('canvas');
+        const size = map.getSize();
+        mapCanvas.width = size[0];
+        mapCanvas.height = size[1];
+        const mapContext = mapCanvas.getContext('2d');
+
+        Array.prototype.forEach.call(
+          map.getViewport().querySelectorAll('.ol-layer canvas, canvas.ol-layer'),
+          function (canvas) {
+            if (canvas.width > 0) {
+              const opacity = canvas.parentNode.style.opacity || canvas.style.opacity;
+              mapContext.globalAlpha = opacity === '' ? 1 : Number(opacity);
+
+              let matrix;
+              const transform = canvas.style.transform;
+              if (transform) {
+                // Get the transform parameters from the style's transform matrix
+                matrix = transform
+                  .match(/^matrix\(([^\(]*)\)$/)[1]
+                  .split(',')
+                  .map(Number);
+              } else {
+                matrix = [
+                  parseFloat(canvas.style.width) / canvas.width,
+                  0,
+                  0,
+                  parseFloat(canvas.style.height) / canvas.height,
+                  0,
+                  0,
+                ];
+              }
+              // Apply the transform to the export map context
+              CanvasRenderingContext2D.prototype.setTransform.apply(
+                mapContext,
+                matrix
+              );
+              const backgroundColor = canvas.parentNode.style.backgroundColor;
+              if (backgroundColor) {
+                mapContext.fillStyle = backgroundColor;
+                mapContext.fillRect(0, 0, canvas.width, canvas.height);
+              }
+              mapContext.drawImage(canvas, 0, 0);
+            }
+          }
+        );
+        mapContext.globalAlpha = 1;
+        mapContext.setTransform(1, 0, 0, 1, 0, 0);
+
+        const link = document.getElementById('image-download');
+        link.href = mapCanvas.toDataURL('image/jpeg');
+        link.download = getFilenameRoot(north, east, south, west) + '.jpg';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      });
+      map.renderSync();
+    });
+
+    document.getElementById('export-kml').addEventListener('click', function () {
+      const { north, east, south, west } = getExtentKeywords();
+      const fileRoot = getFilenameRoot(north, east, south, west);
+      const jpgFile = fileRoot + '.jpg';
+      const kmlFilename = fileRoot + '.kml';
+
+      const kmlLink = document.createElement('a');
+      const text = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<GroundOverlay>
+	<name>Untitled Image Overlay</name>
+	<Icon>
+		<href>${jpgFile}</href>
+		<viewBoundScale>0.75</viewBoundScale>
+	</Icon>
+	<LatLonBox>
+    <north>${north}</north>
+		<south>${south}</south>
+		<east>${east}</east>
+		<west>${west}</west>
+	</LatLonBox>
+</GroundOverlay>
+</kml>
+                `;
+      const file = new File([text], kmlFilename, {
+        type: 'text/plain',
+      });
+      const url = URL.createObjectURL(file);
+
+      kmlLink.href = url;
+      kmlLink.download = file.name;
+      document.body.appendChild(kmlLink);
+      kmlLink.click();
+
+      document.body.removeChild(kmlLink);
+      window.URL.revokeObjectURL(url);
+    });
+
+
+    const appleBtn = document.getElementById("config-apple-btn");
+    const appleModal = document.getElementById("appleModal");
+    const closeAppleModalBtn = document.getElementById("closeAppleModalBtn");
+    const saveAppleTokenBtn = document.getElementById("saveAppleTokenBtn");
+    const clearAppleTokenBtn = document.getElementById("clearAppleTokenBtn");
+    const appleTokenInput = document.getElementById("appleTokenInput");
+
+    // Load any saved explicit token to show in config
+    if (localStorage.getItem("manualAppleToken")) {
+      appleTokenInput.value = localStorage.getItem("manualAppleToken");
+    }
+
+    appleBtn.onclick = function () {
+      appleModal.style.display = "block";
+    }
+
+    closeAppleModalBtn.onclick = function () {
+      appleModal.style.display = "none";
+    }
+
+    const copySnippetBtn = document.getElementById("copySnippetBtn");
+    copySnippetBtn.onclick = function () {
+      const snippet = 'new URL(performance.getEntriesByType("resource").find(e=>e.name.includes("apple-mapkit.com/tile")).name).searchParams.get("accessKey")';
+      navigator.clipboard.writeText(snippet).then(() => {
+        const icon = copySnippetBtn.querySelector('i');
+        icon.className = 'fa fa-check text-success';
+        setTimeout(() => icon.className = 'fa fa-copy', 2000);
+      });
+    };
+
+    saveAppleTokenBtn.onclick = function () {
+      // Strip any accidental quotes (single or double) from the pasted token string
+      const val = appleTokenInput.value.replace(/['"]/g, '').trim();
+      if (val) {
+        localStorage.setItem("manualAppleToken", val);
+        window.location.reload();
+      }
+    }
+
+    clearAppleTokenBtn.onclick = function () {
+      localStorage.removeItem("manualAppleToken");
+      appleTokenInput.value = "";
+      window.location.reload();
+    }
+
+    // When the user clicks on <span> (x), close the modal
+    closeModalBtn.onclick = function () {
+      myModal.style.display = "none";
+    };
+
+    // When the user clicks anywhere outside of the modal, close it
+    window.onmousedown = function (event) {
+      if (event.target == myModal) {
+        myModal.style.display = "none";
+      }
+      if (event.target == appleModal) {
+        appleModal.style.display = "none";
+      }
+    };
+
+
+  </script>
+  </div>
+
+
+
+  <script src="./resources/ol.js"></script>
+  <script src="./resources/ol-layerswitcher.js"></script>
+
+  <script src="./layers/layers.js" type="text/javascript"></script>
+  <script src="./resources/Autolinker.min.js"></script>
+  <script src="./resources/qgis2web.js"></script>
+</body>
+
+</html>
